@@ -111,4 +111,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Support
 
-For support, please contact [Portnox Support](https://www.portnox.com/support/).
+For support, you can:
+
+- Open a [GitHub issue](https://github.com/portnox-community/terraform-provider-portnox/issues) to report bugs or request features.
+- Use the [GitHub Discussions](https://github.com/portnox-community/terraform-provider-portnox/discussions) for community support and questions.
