@@ -21,7 +21,7 @@ This repository contains the Terraform provider for managing resources in [Portn
 
 To use this provider, add the following to your `main.tf` file:
 
-```terraform
+```hcl
 terraform {
   required_providers {
     portnox = {
@@ -32,7 +32,8 @@ terraform {
 }
 
 provider "portnox" {
-  api_key = var.portnox_api_key
+  api_key = "your_api_key"
+  retries = 100
 }
 ```
 
@@ -46,40 +47,34 @@ terraform init
 
 ### Example: Managing a MAC-Based Account
 
-```terraform
+```hcl
 resource "portnox_mac_account" "example" {
   account_name = "Example Account"
-  description  = "An example MAC-based account."
-  group_id     = "12345"
-
-  mac_whitelist = [
-    {
-      mac         = "00:11:22:33:44:55"
-      description = "Example MAC"
-      expiration  = "2025-12-31T23:59:59Z"
-    }
-  ]
 }
 ```
 
 ### Example: Managing Multiple MAC Addresses
 
-```terraform
+```hcl
 resource "portnox_mac_account_addresses" "example" {
   account_name = "Example Account"
-
-  mac_addresses = [
-    {
-      mac_address = "00:11:22:33:44:55"
-      description = "Example MAC 1"
-      expiration  = "2025-12-31T23:59:59Z"
-    },
-    {
-      mac_address = "66:77:88:99:AA:BB"
-      description = "Example MAC 2"
-      expiration  = "2026-12-31T23:59:59Z"
+  dynamic "mac_addresses" {
+    for_each = var.mac_list
+    content {
+      mac_address = mac_addresses.value.mac_address
+      description = mac_addresses.value.description
     }
-  ]
+  }
+}
+```
+
+### Example: Managing an Individual MAC Address
+
+```hcl
+resource "portnox_mac_account_address" "example" {
+  account_name = "Example Account"
+  description  = "Example Description"
+  mac_address  = "00:00:00:00:00:01"
 }
 ```
 
