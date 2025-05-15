@@ -48,7 +48,7 @@ func ResourceMacAccountAddresses() *schema.Resource {
 						Description: "A description of the MAC address. Must be alphanumeric and maximum 64 characters.",
 						ValidateFunc: validation.All(
 							validation.StringLenBetween(0, 64),
-							validation.StringMatch(regexp.MustCompile(`^[a-zA-Z0-9]*$`), "description must contain only alphanumeric characters and be up to 64 characters long"),
+							validation.StringMatch(regexp.MustCompile(`^[a-zA-Z0-9-]*$`), "description must contain only alphanumeric characters or dashes and be up to 64 characters long"),
 						),
 					},
 					"expiration": {
