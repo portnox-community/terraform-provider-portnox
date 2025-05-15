@@ -16,6 +16,35 @@ This data source retrieves information about a MAC-based account in Portnox.
 data "portnox_mac_account" "example" {
   account_id = "my-mac-account"
 }
+
+output "mac_addresses_with_details" {
+  description = "List of MAC addresses with their descriptions and expirations"
+  value = data.portnox_mac_account.example.mac_whitelist
+}
+
+# Access a specific MAC address
+output "first_mac_address" {
+  value = length(data.portnox_mac_account.example.mac_whitelist) > 0 ? data.portnox_mac_account.example.mac_whitelist[0].mac_address : ""
+}
+
+# Access a specific description
+output "first_mac_description" {
+  value = length(data.portnox_mac_account.example.mac_whitelist) > 0 ? data.portnox_mac_account.example.mac_whitelist[0].description : ""
+}
+
+# Display vendor information
+output "vendor_whitelist" {
+  description = "List of vendors with their MAC prefixes"
+  value = data.portnox_mac_account.example.vendor_whitelist
+}
+
+# Access a specific vendor's prefixes
+output "cisco_mac_prefixes" {
+  value = [
+    for vendor in data.portnox_mac_account.example.vendor_whitelist:
+    vendor.vendor_prefixes if vendor.vendor_name == "Cisco Systems, Inc"
+  ][0]
+}
 ```
 
 ## Schema
@@ -29,11 +58,13 @@ data "portnox_mac_account" "example" {
 - `account_name` (String) The name of the MAC-based account.
 - `description` (String) A description of the MAC-based account.
 - `group_id` (String) The group ID associated with the account.
-- `mac_whitelist` (Attributes List) A list of MAC addresses in the whitelist. Each entry includes:
-  - `mac` (String) The MAC address.
+- `mac_whitelist` (Attributes List) A list of MAC addresses in the whitelist with their descriptions and expiration dates. Each entry includes:
+  - `mac_address` (String) The MAC address in the whitelist.
   - `description` (String) A description of the MAC address.
   - `expiration` (String) The expiration date/time of the MAC address.
-- `vendors_whitelist` (List of String) A list of vendor names in the whitelist.
+- `vendor_whitelist` (Attributes List) A list of vendors with their associated MAC address prefixes. Each entry includes:
+  - `vendor_name` (String) The name of the vendor.
+  - `vendor_prefixes` (List of String) List of MAC address prefixes associated with this vendor.
 - `put_devices_into_voice_vlan` (Boolean) Indicates whether devices are put into the voice VLAN.
 - `identity_pre_shared_key` (String) The identity pre-shared key.
 - `block_reason` (String) The reason the account is blocked.
