@@ -26,9 +26,9 @@ resource "portnox_mac_account_address" "example" {
 ### Required
 
 - `account_name` (String) The name of the MAC-based account.
-- `mac_address` (String) The MAC address to be added.
+- `mac_address` (String) The MAC address to be added. Must be in standard format (e.g., 00:00:00:00:00:00 or 00-00-00-00-00-00).
 
 ### Optional
 
-- `description` (String) A description of the MAC address.
+- `description` (String) A description of the MAC address. Limited to 64 alphanumeric characters only.
 - `expiration` (String) The expiration date/time of the MAC address.

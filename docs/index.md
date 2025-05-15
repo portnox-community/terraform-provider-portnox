@@ -35,19 +35,29 @@ resource "portnox_mac_account" "example123" {
 
 resource "portnox_mac_account_addresses" "example123" {
   account_name = "test"
+  
+  # Example of explicit declarations with validation
+  mac_addresses {
+      mac_address = "00:11:22:33:44:55"  # Must be in standard MAC format
+      description = "networkprinter"      # Alphanumeric only, max 64 characters
+  }
+  
+  # Example using dynamic blocks
   dynamic "mac_addresses" {
     for_each = var.mac_list
     content {
-      mac_address = mac_addresses.value.mac_address
-      description = mac_addresses.value.description
+      mac_address = mac_addresses.value.mac_address  # Will be validated for proper MAC format
+      description = mac_addresses.value.description  # Will be validated for alphanumeric, max 64 chars
+      expiration  = mac_addresses.value.expiration
     }
   }
 }
 
 resource "portnox_mac_account_address" "example123" {
   account_name = "test"
-  description  = "tes-"
-  mac_address  = "00:00:00:00:00:01"
+  description  = "printer123"  # Alphanumeric only, max 64 characters
+  mac_address  = "00:00:00:00:00:01"  # Must be in standard MAC format
+  expiration   = "2025-12-31T23:59:59Z"
 }
 ```
 

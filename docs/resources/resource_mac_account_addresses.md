@@ -16,9 +16,20 @@ This resource manages multiple MAC addresses associated with a MAC-based account
 resource "portnox_mac_account_addresses" "example123" {
   account_name = "test"
 
-  "mac_addresses" {
+  mac_addresses {
       mac_address = "00:00:00:11:22:33"
-      description = "description"
+      description = "printer1"
+  }
+  
+  mac_addresses {
+      mac_address = "AA:BB:CC:DD:EE:FF"
+      description = "securitycamera"
+      expiration = "2025-12-31T23:59:59Z"
+  }
+  
+  mac_addresses {
+      mac_address = "11-22-33-44-55-66"
+      description = "networkstorage" 
   }
 }
 ```
@@ -29,6 +40,6 @@ resource "portnox_mac_account_addresses" "example123" {
 
 - `account_name` (String) The name of the MAC-based account.
 - `mac_addresses` (Attributes List) A list of MAC addresses to be added. Each entry includes:
-  - `mac_address` (String) The MAC address.
-  - `description` (String) A description of the MAC address.
-  - `expiration` (String) The expiration date/time of the MAC address.
+  - `mac_address` (String) The MAC address in standard format (e.g., 00:00:00:00:00:00 or 00-00-00-00-00-00). Must be properly formatted using standard MAC address notation.
+  - `description` (String, Optional) A description of the MAC address. Limited to 64 alphanumeric characters only.
+  - `expiration` (String, Optional) The expiration date/time of the MAC address.
