@@ -1,4 +1,11 @@
 
+## [1.0.6] - 2025-05-14
+- Added import functionality to `portnox_mac_account_addresses` resource to allow importing existing MAC accounts with their addresses.
+- Enhanced error handling for imports to handle different API response formats.
+- Updated import logic to handle both older and newer API response structures for the MAC whitelist.
+- Added selective MAC address import feature that allows importing only specific MAC addresses by listing them in the import ID.
+- Improved documentation to clarify that only MAC addresses explicitly declared in the resource configuration will be managed after import.
+
 ## [1.0.5] - 2025-05-14
 - Fixed bug in `portnox_mac_account` data source where MAC whitelist and other fields were not being properly parsed from the API response.
 - Improved error handling and type assertions in the data source to ensure robust parsing of API responses.

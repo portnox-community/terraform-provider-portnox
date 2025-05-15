@@ -43,3 +43,36 @@ resource "portnox_mac_account_addresses" "example123" {
   - `mac_address` (String) The MAC address in standard format (e.g., 00:00:00:00:00:00 or 00-00-00-00-00-00). Must be properly formatted using standard MAC address notation.
   - `description` (String, Optional) A description of the MAC address. Limited to 64 alphanumeric characters only.
   - `expiration` (String, Optional) The expiration date/time of the MAC address.
+
+## Import
+
+MAC account addresses can be imported using the account name. There are two import formats available:
+
+1. Import all MAC addresses associated with the account:
+```bash
+terraform import portnox_mac_account_addresses.example123 test
+```
+
+2. Import only specific MAC addresses by listing them after the account name:
+```bash
+terraform import portnox_mac_account_addresses.example123 "test,00:00:00:11:22:33;AA:BB:CC:DD:EE:FF"
+```
+
+When importing specific MAC addresses, separate multiple addresses with semicolons. This is useful when you want to manage only certain MAC addresses from a large account. If any specified MAC address doesn't exist in the account, the import will fail.
+
+After import, update your Terraform configuration to include only the MAC addresses you want to manage. The resource will only manage MAC addresses that are explicitly declared in the configuration.
+
+For example, after importing an account, you should update your configuration like this:
+
+```terraform
+resource "portnox_mac_account_addresses" "example123" {
+  account_name = "test"
+
+  # Only the MAC addresses declared here will be managed
+  mac_addresses {
+      mac_address = "00:00:00:11:22:33"
+      description = "printer1"
+  }
+  
+  # Other MAC addresses from the import will be ignored by Terraform
+}

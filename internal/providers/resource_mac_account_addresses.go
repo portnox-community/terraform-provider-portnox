@@ -3,8 +3,10 @@ package providers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/portnox-community/terraform-provider-portnox/common"
 
@@ -19,6 +21,9 @@ func ResourceMacAccountAddresses() *schema.Resource {
 		ReadContext:   resourceMacAccountAddressesRead,
 		UpdateContext: resourceMacAccountAddressesUpdate,
 		DeleteContext: resourceMacAccountAddressesDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceMacAccountAddressesImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"account_name": {
 				Type:        schema.TypeString,
@@ -200,7 +205,6 @@ func resourceMacAccountAddressesRead(ctx context.Context, d *schema.ResourceData
 	if err := json.Unmarshal(responseBytes, &response); err != nil {
 		return diag.FromErr(err)
 	}
-
 	// Parse the response to extract MAC whitelist items
 	accounts := response["Accounts"].([]interface{})
 	if len(accounts) == 0 {
@@ -208,7 +212,24 @@ func resourceMacAccountAddressesRead(ctx context.Context, d *schema.ResourceData
 	}
 
 	agentlessOptions := accounts[0].(map[string]interface{})["AgentlessOptions"].(map[string]interface{})
-	macWhiteList := agentlessOptions["MacWhiteList"].(map[string]interface{})["_items"].([]interface{})
+
+	// Handle both API response formats - direct array or map with _items
+	var macWhiteList []interface{}
+	if macArray, ok := agentlessOptions["MacWhiteList"].([]interface{}); ok {
+		// If MacWhiteList is directly an array (newer API versions)
+		macWhiteList = macArray
+	} else if macMap, ok := agentlessOptions["MacWhiteList"].(map[string]interface{}); ok {
+		// If MacWhiteList is a map with _items (older API versions)
+		if items, ok := macMap["_items"].([]interface{}); ok {
+			macWhiteList = items
+		} else {
+			// Empty list as fallback
+			macWhiteList = []interface{}{}
+		}
+	} else {
+		// Empty list as fallback
+		macWhiteList = []interface{}{}
+	}
 
 	// Prepare the list of MAC addresses to update the Terraform state
 	macAddresses = make([]map[string]interface{}, 0) // Use '=' to update the existing variable
@@ -354,7 +375,7 @@ func resourceMacAccountAddressesUpdate(ctx context.Context, d *schema.ResourceDa
 		if updatedMac, exists := updatedMacs[mac]; exists {
 			currentExpiration, currentHasExpiration := currentMac["expiration"].(string)
 			updatedExpiration, updatedHasExpiration := updatedMac["expiration"].(string)
-			
+
 			// Check if expiration has changed
 			if (currentHasExpiration != updatedHasExpiration) || (currentHasExpiration && updatedHasExpiration && currentExpiration != updatedExpiration) {
 				payload := map[string]interface{}{
@@ -365,12 +386,12 @@ func resourceMacAccountAddressesUpdate(ctx context.Context, d *schema.ResourceDa
 						},
 					},
 				}
-				
+
 				// Add expiration only if it exists
 				if updatedHasExpiration && updatedExpiration != "" {
 					payload["MacWhiteList"].([]map[string]interface{})[0]["Expiration"] = updatedExpiration
 				}
-				
+
 				endpoint := "/api/mac-based-accounts/mac-whitelist-remove"
 				if _, err := config.MakeRequestWithRetry("DELETE", endpoint, payload); err != nil {
 					return diag.FromErr(err)
@@ -451,4 +472,126 @@ func resourceMacAccountAddressesDelete(ctx context.Context, d *schema.ResourceDa
 	}
 	d.SetId("")
 	return nil
+}
+
+// resourceMacAccountAddressesImport handles the import of a MAC account addresses resource
+func resourceMacAccountAddressesImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	config := m.(*common.Config)
+
+	// Parse the ID - it may contain specific MAC addresses to import
+	// Format: accountName or accountName,mac1;mac2;mac3
+	importParts := strings.Split(d.Id(), ",")
+	accountName := importParts[0]
+
+	// Create a filter of specific MAC addresses to import if provided
+	macFilter := make(map[string]bool)
+	hasFilter := false
+	if len(importParts) > 1 && importParts[1] != "" {
+		macList := strings.Split(importParts[1], ";")
+		for _, mac := range macList {
+			macFilter[strings.TrimSpace(mac)] = true
+		}
+		hasFilter = true
+	}
+
+	// Set the account name in the resource data
+	d.Set("account_name", accountName)
+
+	// Make a request to get all MAC addresses for this account
+	responseBody, err := config.MakeRequestWithRetry("GET", "/api/mac-based-accounts/"+accountName, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving MAC account %s: %s", accountName, err)
+	}
+
+	// Parse the response
+	var accountData map[string]interface{}
+	if err := json.Unmarshal(responseBody, &accountData); err != nil {
+		return nil, fmt.Errorf("error parsing API response: %s", err)
+	}
+
+	// Extract the MAC whitelist from the response
+	agentlessOptions, ok := accountData["AgentlessOptions"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("AgentlessOptions not found in response or has unexpected type")
+	}
+	// Access MacWhiteList directly as an array from agentlessOptions
+	var macWhiteList []interface{}
+	// Based on the API schema, MacWhiteList is now a direct array
+	if macArray, ok := agentlessOptions["MacWhiteList"].([]interface{}); ok {
+		macWhiteList = macArray
+	} else if macMap, ok := agentlessOptions["MacWhiteList"].(map[string]interface{}); ok {
+		// If MacWhiteList is a map with _items (older API versions)
+		if items, ok := macMap["_items"].([]interface{}); ok {
+			macWhiteList = items
+		} else {
+			// Empty list as fallback
+			macWhiteList = []interface{}{}
+		}
+	} else {
+		// No MAC addresses found or unexpected format, but still valid (empty list)
+		macWhiteList = []interface{}{}
+	}
+
+	// Transform the MAC addresses into the format expected by Terraform
+	macAddresses := make([]map[string]interface{}, 0, len(macWhiteList))
+	for _, item := range macWhiteList {
+		if item == nil {
+			continue
+		}
+
+		macMap, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		macAddress, ok := macMap["Mac"].(string)
+		if !ok || macAddress == "" {
+			continue
+		}
+
+		// If we have a MAC filter, only include MACs that are in the filter
+		if hasFilter && !macFilter[macAddress] {
+			continue
+		}
+
+		// Create entry with the exact field names expected in the Terraform config
+		entry := map[string]interface{}{
+			"mac_address": macAddress,
+		}
+
+		// Handle description (may be null)
+		if desc, ok := macMap["Description"].(string); ok {
+			entry["description"] = desc
+		} else {
+			entry["description"] = ""
+		}
+
+		// Handle expiration (may be null)
+		if exp, ok := macMap["Expiration"].(string); ok && exp != "" {
+			entry["expiration"] = exp
+		}
+
+		macAddresses = append(macAddresses, entry)
+	}
+
+	// If we have a filter but no MAC addresses matched, return an error
+	if hasFilter && len(macAddresses) == 0 {
+		return nil, fmt.Errorf("none of the specified MAC addresses were found in account %s", accountName)
+	}
+
+	// Sort MAC addresses to ensure consistent ordering during import
+	sort.SliceStable(macAddresses, func(i, j int) bool {
+		return macAddresses[i]["mac_address"].(string) < macAddresses[j]["mac_address"].(string)
+	})
+
+	// Set the mac_addresses in the resource data
+	if len(macAddresses) > 0 {
+		macAddressesInterfaces := make([]interface{}, len(macAddresses))
+		for i, mac := range macAddresses {
+			macAddressesInterfaces[i] = mac
+		}
+		d.Set("mac_addresses", macAddressesInterfaces)
+	}
+
+	return []*schema.ResourceData{d}, nil
 }
