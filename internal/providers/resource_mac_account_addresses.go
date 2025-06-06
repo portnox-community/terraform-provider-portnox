@@ -251,9 +251,16 @@ func resourceMacAccountAddressesRead(ctx context.Context, d *schema.ResourceData
 		macAddress := macMap["Mac"].(string)
 		if !stateMacs[macAddress] {
 			continue
+		} // Handle description field which can be null in API response
+		var description string
+		if desc := macMap["Description"]; desc != nil {
+			description = desc.(string)
+		} else {
+			description = ""
 		}
+
 		entry := map[string]interface{}{
-			"description": macMap["Description"].(string),
+			"description": description,
 			"mac_address": macAddress,
 		}
 		if expiration, exists := macMap["Expiration"].(string); exists && expiration != "" {
