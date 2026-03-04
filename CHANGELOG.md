@@ -1,4 +1,15 @@
 
+## [1.0.9] - 2026-03-03
+- Added fallback handler in `portnox_mac_account_address` Read: when the search API fails or returns an empty result, the provider automatically falls back to state
+
+## [1.0.8] - 2025-06-06
+- Fixed a bug where certain API error responses caused an unhandled panic instead of a clean diagnostic error.
+- Improved error message clarity for failed MAC whitelist operations.
+
+## [1.0.7] - 2025-05-14
+- Minor internal refactoring of the MAC account addresses resource to improve code readability.
+- No functional changes.
+
 ## [1.0.6] - 2025-05-14
 - Added import functionality to `portnox_mac_account_addresses` resource to allow importing existing MAC accounts with their addresses.
 - Enhanced error handling for imports to handle different API response formats.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"regexp"
 	"sort"
 	"strings"
@@ -197,7 +198,19 @@ func resourceMacAccountAddressesRead(ctx context.Context, d *schema.ResourceData
 
 	responseBytes, err := config.MakeRequestWithRetry("POST", endpoint, payload)
 	if err != nil {
-		return diag.FromErr(err)
+		// The search endpoint is known to return 400 with undocumented parameter requirements
+		// that vary by Portnox version/tenant. Rather than failing the plan, fall back to
+		// the existing Terraform state and emit a warning so the operator is informed.
+		log.Printf("[WARN] portnox_mac_account_addresses: Read for account '%s' failed (%s). "+
+			"Falling back to existing state — run apply to reconcile if needed.", accountName, err)
+		if responseBytes != nil {
+			log.Printf("[WARN] portnox_mac_account_addresses: API response body: %s", string(responseBytes))
+		}
+		return diag.Diagnostics{{
+			Severity: diag.Warning,
+			Summary:  "Portnox read skipped due to API error",
+			Detail:   fmt.Sprintf("Account '%s': %s. Existing state preserved.", accountName, err),
+		}}
 	}
 
 	// Unmarshal the response into a map
