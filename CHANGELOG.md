@@ -1,4 +1,7 @@
 
+## [1.0.10] - 2026-03-25
+- Fixed `portnox_mac_account_addresses` Read: when the Portnox API returns an empty `Accounts` list (account no longer exists), the provider now calls `d.SetId("")` to gracefully remove the resource from state instead of returning a hard error. This prevents `Error: No account found with name ...` from blocking plans and applies when a resource has been deleted outside of Terraform.
+
 ## [1.0.9] - 2026-03-03
 - Added fallback handler in `portnox_mac_account_address` Read: when the search API fails or returns an empty result, the provider automatically falls back to state
 

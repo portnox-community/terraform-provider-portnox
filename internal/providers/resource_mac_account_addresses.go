@@ -221,7 +221,10 @@ func resourceMacAccountAddressesRead(ctx context.Context, d *schema.ResourceData
 	// Parse the response to extract MAC whitelist items
 	accounts := response["Accounts"].([]interface{})
 	if len(accounts) == 0 {
-		return diag.Errorf("No account found with name %s", accountName)
+		// Account no longer exists in Portnox — remove from Terraform state gracefully
+		log.Printf("[WARN] portnox_mac_account_addresses: account '%s' not found in Portnox, removing from state", accountName)
+		d.SetId("")
+		return nil
 	}
 
 	agentlessOptions := accounts[0].(map[string]interface{})["AgentlessOptions"].(map[string]interface{})
